@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<jnlp
+    spec="1.0+"
+    codebase=""
+    href="$outputFile">
+
+    <information>
+        <title>$project.name $project.version</title>
+        <vendor>$project.organization.name</vendor>
+        <homepage>$project.organization.url</homepage>
+        <desktop/>
+         <menu submenu="Телеметрия"/>
+        <offline-allowed>true</offline-allowed>
+        <icon href="rkk-energia-logo.png" width="128" height="124"/>
+    </information>
+
+    <security>
+        <all-permissions/>
+    </security>
+
+    <resources>
+        <j2se version="1.7+" initial-heap-size="256m" max-heap-size="768m" java-vm-args="-XX:+UseConcMarkSweepGC -XX:+AggressiveOpts -XX:+OptimizeStringConcat -XX:+DoEscapeAnalysis"/>
+        $dependencies
+        <property name="log4j.configuration" value="$webstart_codebase/log4j.xml"/>
+        <property name="java.lang.Integer.IntegerCache.high" value="256"/>
+		<property name="java.net.preferIPv4Stack" value="true"/>
+    </resources>
+    <application-desc main-class="$mainClass"/>
+</jnlp>
+
