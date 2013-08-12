@@ -8,9 +8,10 @@ import java.awt.dnd.DropTarget;
 import java.awt.dnd.DropTargetListener;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.IOException;
 import java.net.URL;
 
 import javax.swing.ImageIcon;
@@ -20,7 +21,6 @@ import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.filechooser.FileNameExtensionFilter;
-import javax.xml.transform.TransformerException;
 
 import org.apache.batik.dom.svg.SAXSVGDocumentFactory;
 import org.apache.batik.dom.svg.SVGOMDocument;
@@ -30,6 +30,7 @@ import org.apache.batik.swing.gvt.GVTTreeRendererEvent;
 import org.apache.batik.swing.svg.GVTTreeBuilderAdapter;
 import org.apache.batik.swing.svg.GVTTreeBuilderEvent;
 import org.apache.batik.swing.svg.JSVGComponent;
+import org.apache.batik.swing.svg.SVGUserAgentAdapter;
 import org.apache.batik.util.XMLResourceDescriptor;
 import org.apache.xpath.XPathAPI;
 import org.w3c.dom.Element;
@@ -39,6 +40,7 @@ public class MainWindow extends JFrame {
 
     private final JLabel filename;
     private final JSVGCanvas canvas;
+    private final LogWindow logWindow;
     private File file;
     private final JButton reloadFile;
     private final JFileChooser fileChooser;
@@ -46,6 +48,7 @@ public class MainWindow extends JFrame {
     private final static String TITLE = "Batik SVG Viewer!";
     private final static String TITLE_LOADING = TITLE + " - Loading...";
     private SVGOMDocument document;
+    private final JLabel logMessage;
 
     public MainWindow() {
         setSize(800, 1000);
@@ -55,6 +58,7 @@ public class MainWindow extends JFrame {
         Image img = iIcon.getImage();
         setIconImage(img);
 
+        logWindow = new LogWindow();
         BorderLayout bl = new BorderLayout();
 
         Container contentPane = getContentPane();
@@ -62,8 +66,7 @@ public class MainWindow extends JFrame {
 
         // -- top panel
         final JPanel controlPanel = new JPanel();
-        FlowLayout flowLayout = new FlowLayout();
-        flowLayout.setAlignment(FlowLayout.LEFT);
+        FlowLayout flowLayout = new FlowLayout(FlowLayout.LEFT, 5, 5);
         controlPanel.setLayout(flowLayout);
 
         reloadFile = new JButton("Reload");
@@ -96,13 +99,34 @@ public class MainWindow extends JFrame {
         filename = new JLabel("<select file>");
         controlPanel.add(filename);
 
+        logMessage = new JLabel(" ");
+        logMessage.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                logWindow.setVisible(true);
+            }
+        });
+        contentPane.add(logMessage, BorderLayout.SOUTH);
+
         contentPane.add(controlPanel, BorderLayout.NORTH);
         // ------
-        canvas = new JSVGCanvas();
+        canvas = new JSVGCanvas(new SVGUserAgentAdapter() {
+            @Override
+            public void displayError(final Exception ex) {
+                logMessage(ex);
+            }
+
+            @Override
+            public void displayError(final String message) {
+                logMessage(message);
+            }
+        }, true, true);
+
         canvas.setDocumentState(JSVGComponent.ALWAYS_DYNAMIC);
         canvas.addGVTTreeBuilderListener(new GVTTreeBuilderAdapter() {
             @Override
             public void gvtBuildStarted(final GVTTreeBuilderEvent e) {
+                logMessage("==>> loading" + file.getPath() + "...");
                 setControlEnabled(false);
             }
 
@@ -113,6 +137,7 @@ public class MainWindow extends JFrame {
             public void gvtRenderingCompleted(final GVTTreeRendererEvent e) {
                 ready();
                 setControlEnabled(true);
+                logMessage("done " + file.getPath());
             }
         });
 
@@ -145,8 +170,8 @@ public class MainWindow extends JFrame {
             FileInputStream input = new FileInputStream(file);
             document = (SVGOMDocument) f.createDocument(null, input);
             canvas.setDocument(document);
-        } catch (IOException e) {
-            System.err.println(e);
+        } catch (Exception e) {
+            logMessage(e);
         }
     }
 
@@ -165,9 +190,21 @@ public class MainWindow extends JFrame {
                 Element element = (Element) nodes.item(i);
                 element.setAttribute("cursor", "pointer");
             }
-        } catch (TransformerException e) {
-            System.err.println(e);
+        } catch (Exception e) {
+            logMessage(e);
         }
 
+    }
+
+    private void logMessage(Exception e) {
+        System.err.println(e);
+        logMessage.setText(e.getMessage());
+        logWindow.log(e);
+    }
+
+    private void logMessage(String e) {
+        System.err.println(e);
+        logMessage.setText(e);
+        logWindow.log(e);
     }
 }
